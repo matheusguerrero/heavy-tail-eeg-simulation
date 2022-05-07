@@ -308,7 +308,7 @@ get_auxiliary_eeg <- function(
 #' @param tail_factor_place A string indicating where to place the heavy-tail factor. 
 #' Can be none (NULL), inside \emph{Z} ("in_z"), or outside \emph{Z} ("out_z").
 #' 
-#' @return A list
+#' @return A list with \emph{eeg}, a data frame of the simulated EEG channels, and \emph{setup} all function imputs.
 sim_patient_eeg <- function(
     pt_id, 
     seizure, 
@@ -426,8 +426,10 @@ sim_patient_eeg <- function(
 }  
 
 
-get_eeg_bands <- function(patient, sampling_rate = 256) {
+get_eeg_bands <- function(patient) {
   
+  
+  sampling_rate <- patient$setup$sampling_rate
   
   signals <- patient$eeg[, -c(1:3)]
   

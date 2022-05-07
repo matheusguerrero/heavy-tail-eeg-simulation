@@ -12,6 +12,7 @@ my_theme <- theme_minimal() +
     legend.text = element_text(size = 14, face = "bold")
   )
 
+
 # Helper fuction for better ggplot2 axis ticks
 number_ticks <- function(n) {function(limits) pretty(limits, n)}
 
