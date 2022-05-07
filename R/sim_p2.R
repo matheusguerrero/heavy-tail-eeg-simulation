@@ -91,9 +91,9 @@ plot_signal(p2)
 
 # Decomposing signals into the five canonical frequency bands and plotting
 p2_bands <- get_eeg_bands(p2)
-bands <- c("delta", "theta", "alpha", "beta", "gamma")
+band <- c("delta", "theta", "alpha", "beta", "gamma")
 for (i in 1:5) {
-  print(plot_signal(p2, p2_bands[[i]], bands[i])) 
+  print(plot_signal(p2, p2_bands[[i]], band[i])) 
 }
 
 
@@ -107,5 +107,12 @@ plot_gpd_shape(p2_gpd)
 plot_gpd_scale(p2_gpd)
 
 
-# We can do everything at once. Note: it may take a while.
+# We can do everything at once. Note: it may take a while (around 4 min).
+start_time <- Sys.time()
 p2_full <- sim_patient(patient_02)
+end_time <- Sys.time()
+end_time - start_time
+
+
+# We can also plot everything at once. Results are saved into the plot sub-directory.
+plot_all(p2_full)

@@ -480,33 +480,32 @@ plot_gpd_scale <- function(dt_gpd) {
 
 plot_signal_all <- function(
     patient, 
-    patient_bands,
+    patient_band,
     output_folder_plots = "./plot/") {
   
   p <- patient
   
   pt <- p$setup$pt_id
   sz <- p$setup$seizure
-  window_duration <- p$setup$window_duration
-  
+  where <- p$setup$tail_factor_place
   
   output_folder_plots = ifelse(
-    is.null(p$tail_factor_place), 
+    is.null(where), 
     output_folder_plots,
-    paste0(output_folder_plots, p$tail_factor_place, "/")
+    paste0(output_folder_plots, where, "/")
   )
   
-  dir <- paste0(output_folder, "eeg-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "eeg-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_signal(patient) -> plot
   print(plot)
   dev.off()
   
-  bands <- c("delta", "theta", "alpha", "beta", "gamma")
+  band <- c("delta", "theta", "alpha", "beta", "gamma")
   for (i in 1:5) {
-    dir <- paste0(output_folder, "eeg-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "eeg-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_signal(patient, patient_bands[[i]], bands[i]) -> plot
+    plot_signal(patient, patient_band[[i]], band[i]) -> plot
     print(plot)
     dev.off()
   }  
@@ -516,7 +515,7 @@ plot_signal_all <- function(
 
 plot_chi_all <- function(
     patient, 
-    patient_bands,
+    patient_band,
     upp_quantile = .85,
     output_folder_plots = "./plot/"
 ) {
@@ -525,34 +524,33 @@ plot_chi_all <- function(
   
   pt <- p$setup$pt_id
   sz <- p$setup$seizure
-  window_duration <- p$setup$window_duration
-  
+  where <- p$setup$tail_factor_place
   
   output_folder_plots = ifelse(
-    is.null(p$tail_factor_place), 
+    is.null(where), 
     output_folder_plots,
-    paste0(output_folder_plots, p$tail_factor_place, "/")
+    paste0(output_folder_plots, where, "/")
   )
   
   # Chi plot - Simulated signal
-  dir <- paste0(output_folder, "chi-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "chi-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_chi(patient, "chi") -> plot
   print(plot)
   dev.off()
   
   # Chi plot - Frequency bands
-  bands <- c("delta", "theta", "alpha", "beta", "gamma")
+  band <- c("delta", "theta", "alpha", "beta", "gamma")
   for(i in 1:5) {
-    dir <- paste0(output_folder, "chi-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "chi-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_chi(patient, "chi", patient_bands[[i]], bands[i]) -> plot
+    plot_chi(patient, "chi", patient_band[[i]], band[i]) -> plot
     print(plot)
     dev.off()
   }
   
   # Chibar plot - Simulated signal
-  dir <- paste0(output_folder, "chibar-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "chibar-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_chi(patient, "chibar") -> plot
   print(plot)
@@ -560,15 +558,15 @@ plot_chi_all <- function(
   
   # Chibar plot - Frequency bands
   for(i in 1:5) {
-    dir <- paste0(output_folder, "chibar-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "chibar-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_chi(patient, "chibar", patient_bands[[i]], bands[i]) -> plot
+    plot_chi(patient, "chibar", patient_band[[i]], band[i]) -> plot
     print(plot)
     dev.off()
   }
   
   # Chi plot window-wise - Simulated signal
-  dir <- paste0(output_folder, "chi-w-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "chi-w-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_chi_win(patient, "chi", upp_quantile) -> plot
   print(plot)
@@ -576,15 +574,15 @@ plot_chi_all <- function(
   
   # Chi plot window-wise - Frequency bands
   for(i in 1:5) {
-    dir <- paste0(output_folder, "chi-w-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "chi-w-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_chi_win(patient, "chi", upp_quantile, patient_bands[[i]], bands[i]) -> plot
+    plot_chi_win(patient, "chi", upp_quantile, patient_band[[i]], band[i]) -> plot
     print(plot)
     dev.off()
   }
   
   # Chibar plot window-wise - Simulated signal
-  dir <- paste0(output_folder, "chibar-w-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "chibar-w-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_chi_win(patient, "chibar", upp_quantile) -> plot
   print(plot)
@@ -592,9 +590,9 @@ plot_chi_all <- function(
   
   # Chi plot window-wise - Frequency bands
   for(i in 1:5) {
-    dir <- paste0(output_folder, "chibar-w-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "chibar-w-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_chi_win(patient, "chibar", upp_quantile, patient_bands[[i]], bands[i]) -> plot
+    plot_chi_win(patient, "chibar", upp_quantile, patient_band[[i]], band[i]) -> plot
     print(plot)
     dev.off()
   }  
@@ -604,50 +602,52 @@ plot_chi_all <- function(
 
 plot_gpd_all <- function(
     patient, 
-    patient_bands,
-    gpd_bands,
+    patient_band,
+    gpd_band,
     output_folder_plots = "./plot/"
 ) {
   
-  p <- patient_scenario
-  
-  output_folder_plots = ifelse(
-    is.null(p$tail_factor_place), 
-    output_folder_plots,
-    paste0(output_folder_plots, p$tail_factor_place, "/")
-  )
+  p <- patient
   
   pt <- p$setup$pt_id
   sz <- p$setup$seizure
+  where <- p$setup$tail_factor_place
   
-  dt_gpd <- gpd_bands %>% 
+  output_folder_plots = ifelse(
+    is.null(where), 
+    output_folder_plots,
+    paste0(output_folder_plots, where, "/")
+  )
+  
+  
+  dt_gpd <- gpd_band %>% 
     dplyr::filter(Band == "Simulated signal")
   
-  dir <- paste0(output_folder, "gpd-shp-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "gpd-shp-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_gpd_shape(dt_gpd) -> plot
   print(plot)
   dev.off()
   
-  dir <- paste0(output_folder, "gpd-scl-", pt, "-", sz, "-0.PNG")
+  dir <- paste0(output_folder_plots, "gpd-scl-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
   plot_gpd_scale(dt_gpd) -> plot
   print(plot)
   dev.off()
   
-  bands <- c("delta", "theta", "alpha", "beta", "gamma")
+  band <- c("delta", "theta", "alpha", "beta", "gamma")
   for (i in 1:5) {
     
-    dt_gpd <- gpd_bands %>% 
-      dplyr::filter(Band == paste0("Filtered ", bands[i], " band"))
+    dt_gpd <- gpd_band %>% 
+      dplyr::filter(Band == paste0("Filtered ", band[i], " band"))
     
-    dir <- paste0(output_folder, "gpd-shp-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "gpd-shp-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
     plot_gpd_shape(dt_gpd) -> plot
     print(plot)
     dev.off()
     
-    dir <- paste0(output_folder, "gpd-scl-", pt, "-", sz, "-", i, ".PNG")
+    dir <- paste0(output_folder_plots, "gpd-scl-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
     plot_gpd_scale(dt_gpd) -> plot
     print(plot)
@@ -658,23 +658,15 @@ plot_gpd_all <- function(
 
 
 plot_all <- function(
-    patient_scenario, 
     patient_simulated, 
+    upp_quantile = .5,
     output_folder_plots = "./plot/"
 ) {
   
-  p <- patient_scenario
-  p_simu <- patient_simulated
+  p <- patient_simulated
   
-  
-  output_folder_plots = ifelse(
-    is.null(p$tail_factor_place), 
-    output_folder_plots,
-    paste0(output_folder_plots, p$tail_factor_place, "/")
-  )
-  
-  plot_signal_all(p_simu$signal, p_simu$bands, output_folder_plots)
-  plot_chi_all(p_simu$signal, p_simu$bands, p$window_duration, upp_quantile = .5, output_folder_plots)
-  plot_gpd_all(p_simu$signal, p_simu$bands, p_simu$gpd, output_folder_plots)
+  plot_signal_all(p$signal, p$bands)
+  plot_chi_all(p$signal, p$bands, upp_quantile = upp_quantile)
+  plot_gpd_all(p$signal, p$bands, p$gpd)
   
 }

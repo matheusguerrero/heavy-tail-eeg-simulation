@@ -308,11 +308,7 @@ get_auxiliary_eeg <- function(
 #' @param tail_factor_place A string indicating where to place the heavy-tail factor. 
 #' Can be none (NULL), inside \emph{Z} ("in_z"), or outside \emph{Z} ("out_z").
 #' 
-<<<<<<< HEAD
 #' @return A list with \emph{eeg}, a data frame of the simulated EEG channels, and \emph{setup} all function inputs.
-=======
-#' @return A list with \emph{eeg}, a data frame of the simulated EEG channels, and \emph{setup} all function imputs.
->>>>>>> 3f9d2a5768f672a7a03718ec0dce93ef0ca45dac
 sim_patient_eeg <- function(
     pt_id, 
     seizure, 
@@ -430,7 +426,6 @@ sim_patient_eeg <- function(
 }  
 
 
-<<<<<<< HEAD
 #' Function: get_eeg_bands
 #'
 #' Decompose the simulated EEG signals into the five canonical frequency bands using a Butterworth filter.
@@ -438,8 +433,6 @@ sim_patient_eeg <- function(
 #' @param patient A list. The output of the function [sim_patient_eeg()]
 #' 
 #' @return A list of data frames. Each element is the simulated EEG signal in a canonical frequency band
-=======
->>>>>>> 3f9d2a5768f672a7a03718ec0dce93ef0ca45dac
 get_eeg_bands <- function(patient) {
   
   
@@ -607,6 +600,14 @@ get_gpd <- function(
 }    
 
 
+#' Function: get_gpd_all
+#'
+#' Estimate the GPD extreme value index (evi) and scale from the EEG signals simulated using the function [sim_patient_eeg()].
+#'
+#' @param patient A list. The output of the function [sim_patient_eeg()].
+#' @param patient_band A list. The output of the function [get_eeg_bands()] for all signals and theirs spectral decomposition.
+#' 
+#' @return A data frame with the estimated GPD evi and scale for the EEG signals and theirs spectral decomposition.
 get_gpd_all <- function(
     patient,
     patient_band
