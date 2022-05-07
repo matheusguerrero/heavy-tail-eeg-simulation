@@ -1,3 +1,5 @@
+#### General plot functions and helpers ####
+
 # Customized plot theme
 my_theme <- theme_minimal() +
   theme(
@@ -12,8 +14,12 @@ my_theme <- theme_minimal() +
     legend.text = element_text(size = 14, face = "bold")
   )
 
+
 # Helper fuction for better ggplot2 axis ticks
 number_ticks <- function(n) {function(limits) pretty(limits, n)}
+
+
+#### Basic plots ####
 
 
 #' Function: get_periodogram
@@ -62,12 +68,14 @@ plot_bands <- function(
   
 }  
 
+
 plot_single_signal <- function(x, signal, ...) {
   plot(x, signal, type = "l", 
     xlab = "Time [s]", ylab = "EEG Amplitude", xaxs="i", xaxt = "n",...
   )
   axis(1, at = c(20, 40, 60, 80))
 }       
+
 
 plot_spectrogram <- function(signal, nfft, sampling_rate, window, overlap,...) {
   
@@ -110,6 +118,9 @@ plot_patient <- function(signal, sample_size, sampling_rate, title) {
   par(mfrow = c(1, 1))
   
 }
+
+
+#### Plots for all simulated channels ####
 
 
 plot_signal <- function(
@@ -208,8 +219,8 @@ plot_chi <- function(
   pt_id <- patient$setup$pt_id
   seizure <- patient$setup$seizure
   
-  
-  pairs <- expand.grid.unique(1:6, 1:6)
+  n_chns <- patient$setup$n_channels
+  pairs <- expand.grid.unique(1:n_chns, 1:n_chns)
   dt_chi <- vector("list", length = nrow(pairs))
   dt_chibar <- vector("list", length = nrow(pairs))
   for(i in 1:nrow(pairs)) {
@@ -270,7 +281,6 @@ plot_chi <- function(
 plot_chi_win <- function(
     patient, 
     type = c("chi", "chibar"),
-    window_duration, 
     upp_quantile = .8,
     dt = NULL, 
     band = c(NULL, "delta", "theta", "alpha", "beta", "gamma")
@@ -280,6 +290,8 @@ plot_chi_win <- function(
   match.arg(type)
   match.arg(band)
   
+  window_duration <- patient$setup$window_duration 
+  
   if (is.null(dt)) {
     dt_split <- patient$eeg[, -c(1:3)]
     input <- "Simulated signal"
@@ -288,17 +300,19 @@ plot_chi_win <- function(
     input <- paste0("Filtered ", band, " band")
   }
   
-  sampling_rate <- 256
-  n <- sampling_rate * patient$setup$sample_size
+  sampling_rate <- patient$setup$sampling_rate
+  sample_size <- patient$setup$sample_size
+  n <- sampling_rate * sample_size
   
   
-  window_n <- patient$setup$sample_size / window_duration
+  window_n <- sample_size / window_duration
   window_size <- window_duration * sampling_rate
   blk <- gl(n = window_n, k = window_size, length = n)
   slices <- split(dt_split, blk)
   
   
-  pairs <- expand.grid.unique(1:6, 1:6)
+  n_chns <- patient$setup$n_channels
+  pairs <- expand.grid.unique(1:n_chns, 1:n_chns)
   dt_chi <- vector("list", length = length(slices))
   dt_chibar <- vector("list", length = length(slices))
   for (j in 1:length(slices)) {
@@ -461,13 +475,26 @@ plot_gpd_scale <- function(dt_gpd) {
 } 
 
 
+#### Combining multiple plots ####
+
+
 plot_signal_all <- function(
     patient, 
     patient_bands,
-    output_folder) {
+    output_folder_plots = "./plot/") {
   
-  pt <- patient$setup$pt_id
-  sz <- patient$setup$seizure
+  p <- patient
+  
+  pt <- p$setup$pt_id
+  sz <- p$setup$seizure
+  window_duration <- p$setup$window_duration
+  
+  
+  output_folder_plots = ifelse(
+    is.null(p$tail_factor_place), 
+    output_folder_plots,
+    paste0(output_folder_plots, p$tail_factor_place, "/")
+  )
   
   dir <- paste0(output_folder, "eeg-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
@@ -490,12 +517,22 @@ plot_signal_all <- function(
 plot_chi_all <- function(
     patient, 
     patient_bands,
-    window_duration,
     upp_quantile = .85,
-    output_folder) {
+    output_folder_plots = "./plot/"
+) {
   
-  pt <- patient$setup$pt_id
-  sz <- patient$setup$seizure
+  p <- patient
+  
+  pt <- p$setup$pt_id
+  sz <- p$setup$seizure
+  window_duration <- p$setup$window_duration
+  
+  
+  output_folder_plots = ifelse(
+    is.null(p$tail_factor_place), 
+    output_folder_plots,
+    paste0(output_folder_plots, p$tail_factor_place, "/")
+  )
   
   # Chi plot - Simulated signal
   dir <- paste0(output_folder, "chi-", pt, "-", sz, "-0.PNG")
@@ -533,7 +570,7 @@ plot_chi_all <- function(
   # Chi plot window-wise - Simulated signal
   dir <- paste0(output_folder, "chi-w-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
-  plot_chi_win(patient, "chi", window_duration, upp_quantile) -> plot
+  plot_chi_win(patient, "chi", upp_quantile) -> plot
   print(plot)
   dev.off()
   
@@ -541,7 +578,7 @@ plot_chi_all <- function(
   for(i in 1:5) {
     dir <- paste0(output_folder, "chi-w-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_chi_win(patient, "chi", window_duration, upp_quantile, patient_bands[[i]], bands[i]) -> plot
+    plot_chi_win(patient, "chi", upp_quantile, patient_bands[[i]], bands[i]) -> plot
     print(plot)
     dev.off()
   }
@@ -549,7 +586,7 @@ plot_chi_all <- function(
   # Chibar plot window-wise - Simulated signal
   dir <- paste0(output_folder, "chibar-w-", pt, "-", sz, "-0.PNG")
   png(dir, width = 1080, height = 720)
-  plot_chi_win(patient, "chibar", window_duration, upp_quantile) -> plot
+  plot_chi_win(patient, "chibar", upp_quantile) -> plot
   print(plot)
   dev.off()
   
@@ -557,7 +594,7 @@ plot_chi_all <- function(
   for(i in 1:5) {
     dir <- paste0(output_folder, "chibar-w-", pt, "-", sz, "-", i, ".PNG")
     png(dir, width = 1080, height = 720)
-    plot_chi_win(patient, "chibar", window_duration, upp_quantile, patient_bands[[i]], bands[i]) -> plot
+    plot_chi_win(patient, "chibar", upp_quantile, patient_bands[[i]], bands[i]) -> plot
     print(plot)
     dev.off()
   }  
@@ -569,11 +606,19 @@ plot_gpd_all <- function(
     patient, 
     patient_bands,
     gpd_bands,
-    output_folder
+    output_folder_plots = "./plot/"
 ) {
   
-  pt <- patient$setup$pt_id
-  sz <- patient$setup$seizure
+  p <- patient_scenario
+  
+  output_folder_plots = ifelse(
+    is.null(p$tail_factor_place), 
+    output_folder_plots,
+    paste0(output_folder_plots, p$tail_factor_place, "/")
+  )
+  
+  pt <- p$setup$pt_id
+  sz <- p$setup$seizure
   
   dt_gpd <- gpd_bands %>% 
     dplyr::filter(Band == "Simulated signal")
@@ -625,7 +670,7 @@ plot_all <- function(
   output_folder_plots = ifelse(
     is.null(p$tail_factor_place), 
     output_folder_plots,
-    paste0("./plot/eeg-simulation/", p$tail_factor_place, "/")
+    paste0(output_folder_plots, p$tail_factor_place, "/")
   )
   
   plot_signal_all(p_simu$signal, p_simu$bands, output_folder_plots)

@@ -308,7 +308,7 @@ get_auxiliary_eeg <- function(
 #' @param tail_factor_place A string indicating where to place the heavy-tail factor. 
 #' Can be none (NULL), inside \emph{Z} ("in_z"), or outside \emph{Z} ("out_z").
 #' 
-#' @return A list
+#' @return A list with \emph{eeg}, a data frame of the simulated EEG channels, and \emph{setup} all function inputs.
 sim_patient_eeg <- function(
     pt_id, 
     seizure, 
@@ -426,8 +426,17 @@ sim_patient_eeg <- function(
 }  
 
 
-get_eeg_bands <- function(patient, sampling_rate = 256) {
+#' Function: get_eeg_bands
+#'
+#' Decompose the simulated EEG signals into the five canonical frequency bands using a Butterworth filter.
+#'
+#' @param patient A list. The output of the function [sim_patient_eeg()]
+#' 
+#' @return A list of data frames. Each element is the simulated EEG signal in a canonical frequency band
+get_eeg_bands <- function(patient) {
   
+  
+  sampling_rate <- patient$setup$sampling_rate
   
   signals <- patient$eeg[, -c(1:3)]
   
@@ -457,6 +466,16 @@ get_eeg_bands <- function(patient, sampling_rate = 256) {
 #### EVT based functions ####
 
 
+#' Function: get_evi
+#'
+#' Estimate the GPD extreme value index (evi) of seizure and non-seizure moments from a simulated EEG signal using [get_auxiliary_eeg()] 
+#'
+#' @param signal A vector. An EEG signal, the output of [get_auxiliary_eeg()].  
+#' @param sampling_rate An integer indicating the number of data points per second.
+#' @param seizure_start An integer indicating the seizure onset (in seconds).
+#' @param seizure_end An integer indicating the ending of the seizure moment (in seconds).
+#' 
+#' @return A data frame with the estimated GPD evi for seizure and non-seizure moments.
 get_evi <- function(signal, sampling_rate, seizure_start, seizure_end) {
   
   k_seq <- c(50, 75, 100, 125, 150)
@@ -488,17 +507,29 @@ get_evi <- function(signal, sampling_rate, seizure_start, seizure_end) {
 } 
 
 
+
+#' Function: get_gpd
+#'
+#' Estimate the GPD extreme value index (evi) and scale from the EEG signals simulated using the function [sim_patient_eeg()].
+#'
+#' @param patient A list. The output of the function [sim_patient_eeg()]
+#' @param patient_band A list. The output of the function [get_eeg_bands()] for the given \code{band}.
+#' @param band A string. The canonical frequency band for which you want to estimate the GPD parameters.
+#' 
+#' @return A data frame with the estimated GPD evi and scale the EEG signal.
 get_gpd <- function(
     patient, 
-    window_duration,
-    dt = NULL, 
-    band = c(NULL, "delta", "theta", "alpha", "beta", "gamma"),
-    sampling_rate = 256
+    patient_band = NULL, 
+    band = c(NULL, "delta", "theta", "alpha", "beta", "gamma")
+    
 ) {
   
   match.arg(band)
   
-  n <- sampling_rate * patient$setup$sample_size
+  window_duration <- patient$setup$window_duration
+  sampling_rate <- patient$setup$sampling_rate
+  sample_size <- patient$setup$sample_size
+  n <- sampling_rate * sample_size
   
   event <- ifelse(
     patient$setup$seizure == 1, 
@@ -507,24 +538,25 @@ get_gpd <- function(
   
   pt_id <- patient$setup$pt_id
   
-  if (is.null(dt)) {
+  if (is.null(patient_band)) {
     dt_split <- patient$eeg[, -c(1:3)]
     input <- "Simulated signal"
   } else {
-    dt_split <- dt[, -c(1:3)]
+    dt_split <- patient_band[, -c(1:3)]
     input <- paste0("Filtered ", band, " band")
   }
   
-  window_n <- patient$setup$sample_size / window_duration
+  window_n <- sample_size / window_duration
   window_size <- window_duration * sampling_rate
   blk <- gl(n = window_n, k = window_size, length = n)
   slices <- split(dt_split, blk)
   
+  n_chns <- patient$setup$n_channels
   k_seq <- seq(40, 120, by = 1)
   dt_gpd <- vector("list", length = window_n)
   for (i in 1:window_n) {
-    dt_chn <- vector("list", length = 6)
-    for (j in 1:6) {
+    dt_chn <- vector("list", length = n_chns)
+    for (j in 1:n_chns) {
       dt_par <- vector("list", length = length(k_seq))
       for (k in seq_along(k_seq)) {
         gpd_par <-  tryCatch(
@@ -555,7 +587,7 @@ get_gpd <- function(
   dt_gpd <- do.call("rbind", dt_gpd)
   
   alpha <- 0.05
-  sig <- alpha / (2 * 6)
+  sig <- alpha / (2 * n_chns)
   z <- qnorm(1 - sig)
   dt_gpd$Shp_lwb <- dt_gpd$Shape - z / sqrt(dt_gpd$k) * (1 + dt_gpd$Shape)
   dt_gpd$Shp_upb <- dt_gpd$Shape + z / sqrt(dt_gpd$k) * (1 + dt_gpd$Shape)
@@ -570,15 +602,15 @@ get_gpd <- function(
 
 get_gpd_all <- function(
     patient,
-    patient_bands,
-    window_duration
+    patient_band
 ) {
   
-  dt_gpd <- vector("list", 6)
+  n_chns <- patient$setup$n_channels
+  dt_gpd <- vector("list", n_chns)
   band = c("delta", "theta", "alpha", "beta", "gamma")
-  dt_gpd[[1]] <- get_gpd(patient, window_duration)
+  dt_gpd[[1]] <- get_gpd(patient)
   
-  for (i in seq_along(band)) dt_gpd[[i + 1]] <- get_gpd(patient, window_duration, patient_bands[[i]], band[i])
+  for (i in seq_along(band)) dt_gpd[[i + 1]] <- get_gpd(patient, patient_band[[i]], band[i])
   
   dt_gpd <- do.call("rbind", dt_gpd)
   
@@ -598,24 +630,38 @@ sim_patient <- function(
   output_folder = ifelse(
     is.null(p$tail_factor_place), 
     output_folder,
-    paste0("./output/", p$tail_factor_place, "/")
+    paste0(output_folder, p$tail_factor_place, "/")
   )
   
   p_signal <- sim_patient_eeg(
-    p$pt_id, p$seizure, p$sample_size, p$sampling_rate, p$window_duration,
-    p$n_channels, p$n_clusters, p$clusters, p$weights, 
-    p$seizure_start, p$seizure_end, p$error_covariance, p$error_variances, 
-    p$tail_type, p$tail_par, p$tail_band_weight, p$tail_factor_place
+    p$pt_id, 
+    p$seizure, 
+    p$sample_size, 
+    p$sampling_rate, 
+    p$window_duration,
+    p$n_channels, 
+    p$n_clusters, 
+    p$clusters, 
+    p$fixed_weights, 
+    p$seizure_start, 
+    p$seizure_end, 
+    p$error_covariance, 
+    p$error_variances, 
+    p$tail_type, 
+    p$tail_par, 
+    p$tail_band_weight, 
+    p$tail_factor_place
   )
   
   p_bands <- get_eeg_bands(p_signal)
   
-  p_gpd <- get_gpd_all(p_signal, p_bands, p$window_duration)
+  p_gpd <- get_gpd_all(p_signal, p_bands)
   
-  patient = list(signal = p_signal, bands = p_bands, gpd = p_gpd)
+  patient <- list(signal = p_signal, bands = p_bands, gpd = p_gpd)
   write_rds(patient, 
             paste0(output_folder, "patient-", p$pt_id, "-", p$seizure, ".RDS")
   )
+  
   return(patient)
   
 }
